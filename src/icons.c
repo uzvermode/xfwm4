@@ -497,10 +497,6 @@ getAppIcon (Client *c, guint width, guint height)
     mask = None;
 
     screen_info = c->screen_info;
-    if (read_rgb_icon (screen_info->display_info, c->window, width, height, &w, &h, &pixdata))
-    {
-        return scaled_from_pixdata (pixdata, w, h, width, height);
-    }
 
     myDisplayErrorTrapPush (screen_info->display_info);
     hints = XGetWMHints (myScreenGetXDisplay(screen_info), c->window);
@@ -521,15 +517,6 @@ getAppIcon (Client *c, guint width, guint height)
         hints = NULL;
     }
 
-    if (pixmap != None)
-    {
-        GdkPixbuf *icon = try_pixmap_and_mask (screen_info, pixmap, mask, width, height);
-        if (icon)
-        {
-            return icon;
-        }
-    }
-
     getKDEIcon (screen_info->display_info, c->window, &pixmap, &mask);
     if (pixmap != None)
     {
@@ -542,14 +529,35 @@ getAppIcon (Client *c, guint width, guint height)
 
     if (c->class.res_name != NULL)
     {
+        // FIXME delete hardcoded icons
+        gchar *rn = c->class.res_name;
+        gchar *rc = c->class.res_class;
+        if (g_ascii_strncasecmp(c->class.res_name,"code", -1) == 0) {
+            rn = "visual-studio-code";
+            rc = "Visual-studio-code";
+        }
         GdkPixbuf *icon = gtk_icon_theme_load_icon (gtk_icon_theme_get_default (),
-                                                    c->class.res_name,
+                                                    rn,
                                                     MIN (width, height),
                                                     0, NULL);
         if (icon)
         {
             return icon;
         }
+
+        GdkPixbuf *icon2 = gtk_icon_theme_load_icon (gtk_icon_theme_get_default (),
+                                                    g_utf8_strdown(rc, -1),
+                                                    MIN (width, height),
+                                                    0, NULL);
+        if (icon2)
+        {
+            return icon2;
+        }
+    }
+
+    if (read_rgb_icon (screen_info->display_info, c->window, width, height, &w, &h, &pixdata))
+    {
+        return scaled_from_pixdata (pixdata, w, h, width, height);
     }
 
     return default_icon_at_size (screen_info->gscr, width, height);

@@ -208,7 +208,7 @@ pretty_string (const gchar *s)
 }
 
 static void
-tabwinSetLabel (TabwinWidget *tabwin_widget, GtkWidget *buttonlabel, gchar *class, gchar *label, int workspace)
+tabwinSetLabel (TabwinWidget *tabwin_widget, gchar *class, gchar *label, int workspace)
 {
     gchar *message;
     PangoLayout *layout;
@@ -217,19 +217,11 @@ tabwinSetLabel (TabwinWidget *tabwin_widget, GtkWidget *buttonlabel, gchar *clas
     TRACE ("class \"%s\", label \"%s\", workspace %i", class, label, workspace);
 
     message = pretty_string (class);
-    gtk_label_set_text (GTK_LABEL (buttonlabel), message);
-    g_free (message);
+    message = g_markup_printf_escaped ("<b>%s</b>", message);
 
-    if (tabwin_widget->tabwin->display_workspace)
-    {
-        message = g_strdup_printf ("[%i] - %s", workspace + 1, label);
-    }
-    else
-    {
-        message = g_strdup_printf ("%s", label);
-    }
 
-    gtk_label_set_text (GTK_LABEL (tabwin_widget->label), message);
+    gtk_label_set_use_markup (GTK_LABEL (tabwin_widget->label), TRUE); // Tabwin label set bold test with markup
+    gtk_label_set_markup (GTK_LABEL (tabwin_widget->label), message); // Tabwin label set bold test with markup
     /* Need to update the layout after setting the text */
     layout = gtk_label_get_layout (GTK_LABEL(tabwin_widget->label));
     pango_layout_set_auto_dir (layout, FALSE);
@@ -239,7 +231,7 @@ tabwinSetLabel (TabwinWidget *tabwin_widget, GtkWidget *buttonlabel, gchar *clas
 }
 
 static void
-tabwinSetSelected (TabwinWidget *tabwin_widget, GtkWidget *w, GtkWidget *l)
+tabwinSetSelected (TabwinWidget *tabwin_widget, GtkWidget *w)
 {
     Client *c;
     gchar *classname;
@@ -266,7 +258,7 @@ tabwinSetSelected (TabwinWidget *tabwin_widget, GtkWidget *w, GtkWidget *l)
         }
 
         classname = g_strdup(c->class.res_class);
-        tabwinSetLabel (tabwin_widget, l, classname, c->name, c->win_workspace);
+        tabwinSetLabel (tabwin_widget, classname, c->name, c->win_workspace);
         g_free (classname);
     }
 }
@@ -292,11 +284,6 @@ tabwinSelectWidget (Tabwin *tabwin)
             buttonbox = GTK_WIDGET (g_list_nth_data (children, 0));
             g_list_free (children);
 
-            children = gtk_container_get_children (GTK_CONTAINER (buttonbox));
-            buttonlabel = GTK_WIDGET (g_list_nth_data (children, 1) );
-            g_list_free (children);
-            gtk_label_set_text (GTK_LABEL (buttonlabel), "");
-
             if (gtk_widget_is_focus (window_button))
             {
                 c = g_object_get_data (G_OBJECT (window_button), "client-ptr-val");
@@ -307,7 +294,6 @@ tabwinSelectWidget (Tabwin *tabwin)
                     tabwin->selected = selected;
                 }
 
-                tabwinSetSelected (tabwin_widget, window_button, buttonlabel);
                 gtk_widget_queue_draw (GTK_WIDGET (tabwin_widget));
             }
         }
@@ -403,12 +389,8 @@ cb_window_button_enter (GtkWidget *widget, GdkEvent *event, gpointer user_data)
         buttonbox = GTK_WIDGET (g_list_nth_data (children, 0));
         g_list_free (children);
 
-        children = gtk_container_get_children (GTK_CONTAINER (buttonbox));
-        buttonlabel = GTK_WIDGET (g_list_nth_data (children, 1));
-        g_list_free (children);
-
         classname = g_strdup (c->class.res_class);
-        tabwinSetLabel (tabwin_widget, buttonlabel, classname, c->name, c->win_workspace);
+        tabwinSetLabel (tabwin_widget, classname, c->name, c->win_workspace);
         g_free (classname);
     }
 
@@ -511,12 +493,9 @@ createWindowlist (ScreenInfo *screen_info, TabwinWidget *tabwin_widget)
         {
             gtk_widget_set_size_request (GTK_WIDGET (window_button), size_request, size_request);
             buttonbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
-            buttonlabel = gtk_label_new ("");
-            gtk_label_set_xalign (GTK_LABEL (buttonlabel), 0.5);
-            gtk_label_set_yalign (GTK_LABEL (buttonlabel), 1.0);
 
             gtk_widget_set_halign (icon, GTK_ALIGN_CENTER);
-            gtk_widget_set_valign (icon, GTK_ALIGN_END);
+            gtk_widget_set_valign (icon, GTK_ALIGN_CENTER);
             gtk_box_pack_start (GTK_BOX (buttonbox), icon, TRUE, TRUE, 0);
         }
         else
@@ -531,22 +510,16 @@ createWindowlist (ScreenInfo *screen_info, TabwinWidget *tabwin_widget)
             else
             {
                 gtk_widget_set_size_request (GTK_WIDGET (window_button),
-                                             label_width, tabwin->icon_size + 8);
+                                             tabwin->icon_size + 8, tabwin->icon_size + 8);
             }
             buttonbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
             buttonlabel = gtk_label_new (c->name);
-            gtk_label_set_xalign (GTK_LABEL (buttonlabel), 0);
-            gtk_label_set_yalign (GTK_LABEL (buttonlabel), 0.5);
 
             gtk_widget_set_halign (icon, GTK_ALIGN_CENTER);
             gtk_widget_set_valign (icon, GTK_ALIGN_CENTER);
             gtk_box_pack_start (GTK_BOX (buttonbox), icon, FALSE, FALSE, 0);
         }
         gtk_container_add (GTK_CONTAINER (window_button), buttonbox);
-
-        gtk_label_set_justify (GTK_LABEL (buttonlabel), GTK_JUSTIFY_CENTER);
-        gtk_label_set_ellipsize (GTK_LABEL (buttonlabel), PANGO_ELLIPSIZE_END);
-        gtk_box_pack_start (GTK_BOX (buttonbox), buttonlabel, TRUE, TRUE, 0);
 
         if (screen_info->params->cycle_tabwin_mode == STANDARD_ICON_GRID)
         {
@@ -572,7 +545,7 @@ createWindowlist (ScreenInfo *screen_info, TabwinWidget *tabwin_widget)
     }
     if (selected)
     {
-        tabwinSetSelected (tabwin_widget, selected, selected_label);
+        tabwinSetSelected (tabwin_widget, selected);
     }
     return windowlist;
 }
@@ -864,26 +837,16 @@ tabwinChange2Selected (Tabwin *tabwin, GList *selected)
             buttonbox = GTK_WIDGET (g_list_nth_data (children, 0));
             g_list_free (children);
 
-            children = gtk_container_get_children (GTK_CONTAINER (buttonbox));
-            buttonlabel = GTK_WIDGET (g_list_nth_data (children, 1));
-            g_list_free (children);
-
             c = g_object_get_data (G_OBJECT (window_button), "client-ptr-val");
 
             if (c != NULL)
             {
                 /* don't clear label if mouse is inside the previously
                  * selected button */
-                if (c->screen_info->params->cycle_tabwin_mode == STANDARD_ICON_GRID
-                    && window_button != tabwin_widget->hovered)
-                {
-                    gtk_label_set_text (GTK_LABEL (buttonlabel), "");
-                }
-
                 if (c == tabwin->selected->data)
                 {
                     gtk_widget_grab_focus (window_button);
-                    tabwinSetSelected (tabwin_widget, window_button, buttonlabel);
+                    tabwinSetSelected (tabwin_widget, window_button);
                     gtk_widget_queue_draw (GTK_WIDGET (tabwin_widget));
                 }
             }
@@ -1019,13 +982,9 @@ tabwinSelectHead (Tabwin *tabwin)
             buttonbox = GTK_WIDGET (g_list_nth_data (children, 0));
             g_list_free (children);
 
-            children = gtk_container_get_children (GTK_CONTAINER (buttonbox));
-            buttonlabel = GTK_WIDGET (g_list_nth_data (children, 1));
-            g_list_free (children);
-
             if (((Client *) g_object_get_data (G_OBJECT (window_button), "client-ptr-val")) == head->data)
             {
-                tabwinSetSelected (tabwin_widget, window_button, buttonlabel);
+                tabwinSetSelected (tabwin_widget, window_button);
                 gtk_widget_queue_draw (GTK_WIDGET (tabwin_widget));
             }
         }
