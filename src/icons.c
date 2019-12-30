@@ -502,6 +502,37 @@ getAppIcon (Client *c, guint width, guint height)
     hints = XGetWMHints (myScreenGetXDisplay(screen_info), c->window);
     myDisplayErrorTrapPopIgnored (screen_info->display_info);
 
+    // TODO Read ini config file $HOME/xfce4/xfwm4/tabwin.rc
+    // FIXME remove hardcoded variables
+    GKeyFile* config_file;
+    g_autoptr(GError) error = NULL;
+    config_file = g_key_file_new();
+    GHashTable *htable = g_hash_table_new(g_str_hash, g_str_equal);
+    gchar *config = g_build_filename(g_get_user_config_dir(),
+                                        "xfce4", g_get_application_name(),
+                                        "xfwm4.rc", NULL);
+    if (g_key_file_load_from_file(config_file, config, G_KEY_FILE_NONE, &error)){
+        // g_print("Could not read config file %s\n", config);
+        // TODO init hash table with values from config
+        if (g_key_file_has_group(config_file, "Tabwin")){
+            // g_print("%s\n", "Tabwin");
+            gchar **keys = g_key_file_get_keys(config_file, "Tabwin", NULL, &error);
+            // g_print("%d\n", g_strv_length(keys));
+            for (size_t i = 0; i < g_strv_length(keys); i++)
+            {
+                g_hash_table_insert(htable,keys[i],g_key_file_get_value(config_file,"Tabwin",keys[i], &error));
+            }
+        }
+    }
+    // delete config file
+    g_key_file_free(config_file);
+    
+    
+    // g_hash_table_insert(htable,"code","visual-studio-code");
+    // g_hash_table_insert(htable,"xfce4-terminal","terminal");
+    // g_hash_table_insert(htable,"NVIM","neovim");
+    // g_hash_table_insert(htable,"gimp-2.10","gimp");
+
     if (hints)
     {
         if (hints->flags & IconPixmapHint)
@@ -532,10 +563,28 @@ getAppIcon (Client *c, guint width, guint height)
         // FIXME delete hardcoded icons
         gchar *rn = c->class.res_name;
         gchar *rc = c->class.res_class;
-        if (g_ascii_strncasecmp(c->class.res_name,"code", -1) == 0) {
-            rn = "visual-studio-code";
-            rc = "Visual-studio-code";
+
+        // check hashtable for window class
+        if (g_hash_table_lookup(htable, g_utf8_strdown(c->class.res_class, -1)) != NULL){
+            rn = (g_hash_table_lookup(htable, g_utf8_strdown(c->class.res_class, -1)));
         }
+        // check hashtable with window title
+        if (c->name != NULL){
+            GHashTableIter iter;
+            gpointer key, value;
+
+            g_hash_table_iter_init (&iter, htable);
+            while (g_hash_table_iter_next (&iter, &key, &value))
+            {
+                if (g_strv_contains((const gchar * const *) g_strsplit(c->name, " ", -1), key) == 1) {
+                    rn = value;
+                }
+
+            }
+        }
+        // delete hashtable
+        g_hash_table_destroy(htable);
+
         GdkPixbuf *icon = gtk_icon_theme_load_icon (gtk_icon_theme_get_default (),
                                                     rn,
                                                     MIN (width, height),

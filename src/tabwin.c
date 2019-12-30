@@ -216,8 +216,8 @@ tabwinSetLabel (TabwinWidget *tabwin_widget, gchar *class, gchar *label, int wor
     g_return_if_fail (tabwin_widget);
     TRACE ("class \"%s\", label \"%s\", workspace %i", class, label, workspace);
 
-    message = pretty_string (class);
-    message = g_markup_printf_escaped ("<b>%s</b>", message);
+    // message = pretty_string (label);
+    message = g_markup_printf_escaped ("<b>%s</b>", label);
 
 
     gtk_label_set_use_markup (GTK_LABEL (tabwin_widget->label), TRUE); // Tabwin label set bold test with markup
