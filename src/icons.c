@@ -503,7 +503,7 @@ getAppIcon (Client *c, guint width, guint height)
     myDisplayErrorTrapPopIgnored (screen_info->display_info);
 
     // TODO Read ini config file $HOME/xfce4/xfwm4/tabwin.rc
-    // FIXME remove hardcoded variables
+    // FIXME remove hardcoded variables and overhead on init
     GKeyFile* config_file;
     g_autoptr(GError) error = NULL;
     config_file = g_key_file_new();
@@ -567,6 +567,15 @@ getAppIcon (Client *c, guint width, guint height)
         // check hashtable for window class
         if (g_hash_table_lookup(htable, g_utf8_strdown(c->class.res_class, -1)) != NULL){
             rn = (g_hash_table_lookup(htable, g_utf8_strdown(c->class.res_class, -1)));
+
+            GdkPixbuf *icon = gtk_icon_theme_load_icon (gtk_icon_theme_get_default (),
+                                                        rn,
+                                                        MIN (width, height),
+                                                        0, NULL);
+            if (icon){
+              g_hash_table_destroy(htable);
+              return icon;
+            }
         }
         // check hashtable with window title
         if (c->name != NULL){
@@ -578,6 +587,15 @@ getAppIcon (Client *c, guint width, guint height)
             {
                 if (g_strv_contains((const gchar * const *) g_strsplit(c->name, " ", -1), key) == 1) {
                     rn = value;
+
+                    GdkPixbuf *icon = gtk_icon_theme_load_icon (gtk_icon_theme_get_default (),
+                                                                rn,
+                                                                MIN (width, height),
+                                                                0, NULL);
+                    if(icon){
+                      g_hash_table_destroy(htable);
+                      return icon;
+                    }
                 }
 
             }
