@@ -748,6 +748,7 @@ tabwinCreateWidget (Tabwin *tabwin, ScreenInfo *screen_info, gint monitor_num)
 
     gtk_window_set_screen (GTK_WINDOW (tabwin_widget), screen_info->gscr);
     gtk_window_set_default_size (GTK_WINDOW (tabwin_widget), 0, 0);
+    // gtk_window_set_title(GTK_WINDOW (tabwin_widget), "xfwm4-tabwin");
     gtk_widget_set_name (GTK_WIDGET (tabwin_widget), XFWM_TABWIN_NAME);
     apply_default_theme (tabwin_widget, screen_info);
 
